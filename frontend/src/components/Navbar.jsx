@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { supabase } from "../lib/supabase";
 
 // ─── Animated Hexagon Logo SVG ──────────────────────────────────────────────
 // A geometric hexagon outline that slowly rotates, rendered in amber.
@@ -139,11 +140,22 @@ function PipelineHealthChip({ apiBase }) {
   );
 }
 
-// ─── Agent Mode Badge ───────────────────────────────────────────────────────
-// A purely decorative badge for the session indicator on the right.
-function AgentModeBadge() {
+// ─── Sign Out Button ────────────────────────────────────────────────────────
+function SignOutButton({ onSignOut }) {
+  const handleSignOut = async () => {
+    if (onSignOut) {
+      await onSignOut();
+    } else {
+      if (supabase) {
+        await supabase.auth.signOut();
+      }
+      window.location.href = "/";
+    }
+  };
+
   return (
-    <div
+    <button
+      onClick={handleSignOut}
       style={{
         display: "flex",
         alignItems: "center",
@@ -152,19 +164,27 @@ function AgentModeBadge() {
         borderRadius: "var(--radius-pill)",
         background: "rgba(117, 86, 63, 0.10)",
         border: "1px solid rgba(117, 86, 63, 0.22)",
+        cursor: "pointer",
+        transition: "all 0.2s ease",
+        outline: "none",
+      }}
+      onMouseEnter={e => {
+        e.currentTarget.style.borderColor = "rgba(245, 213, 184, 0.5)";
+        e.currentTarget.style.boxShadow = "0 0 8px rgba(245, 213, 184, 0.2)";
+        e.currentTarget.children[1].style.opacity = "1";
+      }}
+      onMouseLeave={e => {
+        e.currentTarget.style.borderColor = "rgba(117, 86, 63, 0.22)";
+        e.currentTarget.style.boxShadow = "none";
+        e.currentTarget.children[1].style.opacity = "0.85";
       }}
     >
-      {/* Small pulsing amber dot */}
-      <span
-        style={{
-          width: "6px",
-          height: "6px",
-          borderRadius: "50%",
-          background: "var(--amber)",
-          animation: "amberPulse 2s ease-out infinite",
-          flexShrink: 0,
-        }}
-      />
+      {/* Log Out Icon (Arrow leaving box) */}
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--amber-light)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.85 }}>
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+        <polyline points="16 17 21 12 16 7"></polyline>
+        <line x1="21" y1="12" x2="9" y2="12"></line>
+      </svg>
       <span
         style={{
           fontFamily: "var(--font-mono)",
@@ -174,11 +194,13 @@ function AgentModeBadge() {
           color: "var(--amber-light)",
           textTransform: "uppercase",
           userSelect: "none",
+          opacity: 0.85,
+          transition: "opacity 0.2s ease",
         }}
       >
-        Agent Mode
+        Sign Out
       </span>
-    </div>
+    </button>
   );
 }
 
@@ -227,7 +249,7 @@ function HamburgerButton({ isOpen, onClick }) {
 }
 
 // ─── Navbar Main Component ──────────────────────────────────────────────────
-export default function Navbar({ apiBase, isSidebarOpen, onToggleSidebar }) {
+export default function Navbar({ apiBase, isSidebarOpen, onToggleSidebar, onSignOut }) {
   return (
     <>
       <style>{`
@@ -264,11 +286,12 @@ export default function Navbar({ apiBase, isSidebarOpen, onToggleSidebar }) {
             <HexLogo />
             <span
               style={{
-                fontFamily: "var(--font-display)",
-                fontSize: "20px",
-                fontWeight: "600",
-                color: "var(--cream)",
-                letterSpacing: "-0.01em",
+                fontFamily: '"Playfair Display", Georgia, serif',
+                fontSize: "24px",
+                fontWeight: "700",
+                color: "#1A0A04",
+                letterSpacing: "normal",
+                textTransform: "capitalize",
                 userSelect: "none",
               }}
             >
@@ -282,8 +305,8 @@ export default function Navbar({ apiBase, isSidebarOpen, onToggleSidebar }) {
           <PipelineHealthChip apiBase={apiBase} />
         </div>
 
-        {/* RIGHT: Agent Mode badge */}
-        <AgentModeBadge />
+        {/* RIGHT: Sign Out button */}
+        <SignOutButton onSignOut={onSignOut} />
       </nav>
     </>
   );

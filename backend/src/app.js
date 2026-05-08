@@ -3,6 +3,7 @@ const cors = require('cors');
 const { frontendOrigin } = require('./config');
 const opportunitiesRouter = require('./routes/opportunities');
 const contextRouter = require('./routes/context');
+const soulSyncRouter = require('./routes/soul-sync');
 const copilotRouter = require('./routes/copilot');
 
 function createApp() {
@@ -21,7 +22,7 @@ function createApp() {
         return callback(new Error(`CORS blocked for origin ${origin}`));
       },
       credentials: true,
-      methods: ['GET', 'POST', 'PATCH', 'OPTIONS'],
+      methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
     }),
   );
@@ -34,7 +35,8 @@ function createApp() {
 
   app.use('/opportunities', opportunitiesRouter);
   app.use('/context', contextRouter);
-  app.use('/copilot', copilotRouter);
+  app.use('/copilot',    copilotRouter);
+  app.use('/soul-sync',  soulSyncRouter);
   app.use('/logs',    require('./routes/logs'));
   app.use('/digest',  require('./routes/digest'));
   app.use('/papers',  require('./routes/papers'));

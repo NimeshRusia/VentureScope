@@ -1,121 +1,110 @@
 import { useEffect, useRef, useState } from "react";
+import { supabase } from "./lib/supabase";
 import "./login.css";
 
-/* ── Animated dark sculptural canvas background ───────────────────────────── */
-function SculptureCanvas() {
+/* ── Subtle background contour lines ─────────────────────────────────────── */
+function BgCanvas() {
   const ref = useRef(null);
   useEffect(() => {
     const canvas = ref.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     let raf, t = 0;
-
     function resize() {
       canvas.width  = canvas.offsetWidth;
       canvas.height = canvas.offsetHeight;
     }
     resize();
     window.addEventListener("resize", resize);
-
     function draw() {
       const W = canvas.width, H = canvas.height;
       ctx.clearRect(0, 0, W, H);
-
-      /* ── radial spotlight centre ── */
-      const cx = W * 0.5, cy = H * 0.38;
-      const spot = ctx.createRadialGradient(cx, cy, 0, cx, cy, H * 0.55);
-      spot.addColorStop(0,   "rgba(60,35,18,0.55)");
-      spot.addColorStop(0.45,"rgba(30,18,8,0.30)");
-      spot.addColorStop(1,   "rgba(0,0,0,0)");
-      ctx.fillStyle = spot;
-      ctx.fillRect(0, 0, W, H);
-
-      /* ── flowing contour lines ── */
-      const lineCount = 22;
-      for (let i = 0; i < lineCount; i++) {
-        const progress = i / lineCount;
-        const alpha = 0.03 + progress * 0.07;
+      for (let i = 0; i < 20; i++) {
+        const p = i / 20;
         ctx.beginPath();
-        ctx.strokeStyle = `rgba(200,160,100,${alpha})`;
-        ctx.lineWidth = 0.8;
-
-        const yBase = H * 0.15 + progress * H * 0.65;
+        ctx.strokeStyle = `rgba(245,213,184,${0.012 + p * 0.018})`;
+        ctx.lineWidth = 0.6;
+        const yBase = H * 0.1 + p * H * 0.75;
         ctx.moveTo(0, yBase);
-        for (let x = 0; x <= W; x += 3) {
+        for (let x = 0; x <= W; x += 4) {
           const nx = x / W;
-          const y = yBase
-            + Math.sin(nx * Math.PI * 2.5 + t + i * 0.4)  * (24 - i * 0.5)
-            + Math.cos(nx * Math.PI * 4   + t * 0.7 + i)  * (10 - i * 0.2)
-            + Math.sin(nx * Math.PI * 1   - t * 0.4)      * 6;
-          ctx.lineTo(x, y);
+          ctx.lineTo(x,
+            yBase
+            + Math.sin(nx * Math.PI * 2.8 + t + i * 0.5) * (18 - i * 0.5)
+            + Math.cos(nx * Math.PI * 5   + t * 0.6 + i)  * (7  - i * 0.2)
+          );
         }
         ctx.stroke();
       }
-
-      /* ── subtle central glow blob ── */
-      const blob = ctx.createRadialGradient(cx, cy * 0.9, 0, cx, cy * 0.9, H * 0.28);
-      blob.addColorStop(0,   "rgba(120,60,20,0.18)");
-      blob.addColorStop(0.6, "rgba(80,35,10,0.06)");
-      blob.addColorStop(1,   "rgba(0,0,0,0)");
-      ctx.fillStyle = blob;
-      ctx.fillRect(0, 0, W, H);
-
-      t += 0.005;
+      t += 0.003;
       raf = requestAnimationFrame(draw);
     }
     draw();
     return () => { cancelAnimationFrame(raf); window.removeEventListener("resize", resize); };
   }, []);
-  return <canvas ref={ref} className="lgi-canvas" />;
+  return <canvas ref={ref} className="lgi2-bg-canvas" />;
 }
 
 /* ── Main Login Page ─────────────────────────────────────────────────────── */
 export default function LoginPage({ onLogin, onBack, onRequestAccess }) {
-  const [email,       setEmail]       = useState("");
-  const [password,    setPassword]    = useState("");
-  const [showPass,    setShowPass]    = useState(false);
-  const [loading,     setLoading]     = useState(false);
-  const [error,       setError]       = useState("");
-  const [emailFocus,  setEmailFocus]  = useState(false);
-  const [passFocus,   setPassFocus]   = useState(false);
+  const [email,      setEmail]      = useState("");
+  const [password,   setPassword]   = useState("");
+  const [showPass,   setShowPass]   = useState(false);
+  const [loading,    setLoading]    = useState(false);
+  const [error,      setError]      = useState("");
+  const [emailFocus, setEmailFocus] = useState(false);
+  const [passFocus,  setPassFocus]  = useState(false);
 
-  function handleSubmit(e) {
+  // ── Real Supabase auth ───────────────────────────────────────────────────
+  async function handleSubmit(e) {
     e.preventDefault();
     if (!email || !password) { setError("Please fill in all fields."); return; }
     setError("");
     setLoading(true);
-    // Simulate auth — call onLogin to switch to the app
-    setTimeout(() => { setLoading(false); onLogin(); }, 900);
+    try {
+      const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
+      if (authError) {
+        console.error("Supabase login error:", authError);
+        setError(authError.message || "Invalid credentials. Please try again.");
+      } else {
+        onLogin();
+      }
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
-    <div className="lgi-root">
-      <SculptureCanvas />
+    <div className="lgi2-root">
+      <BgCanvas />
 
-      {/* ── NAV ── */}
-      <nav className="lgi-nav">
-        <button className="lgi-nav-logo" onClick={onBack}>VentureScope</button>
-        <div className="lgi-nav-status">
-          <span className="lgi-status-dot" />
-          SYSTEM STATUS: OPTIMAL
-        </div>
+      {/* ── TOP NAV ── only logo, no buttons ────────────────────────────── */}
+      <nav className="lgi2-nav">
+        <button className="lgi2-logo" onClick={onBack}>VentureScope</button>
       </nav>
 
-      {/* ── FORM PANEL ── */}
-      <main className="lgi-main">
-        <form className="lgi-form" onSubmit={handleSubmit} noValidate>
-          <h1 className="lgi-heading">Log in</h1>
+      {/* ── FORM AREA ────────────────────────────────────────────────────── */}
+      <main className="lgi2-main">
+        <form className="lgi2-form" onSubmit={handleSubmit} noValidate>
 
-          {error && <p className="lgi-error">{error}</p>}
+          {/* Heading */}
+          <h1 className="lgi2-heading">Sign in</h1>
+          <p className="lgi2-subtitle">
+            Enter your credentials to access the intelligence layer
+          </p>
 
-          {/* Email */}
-          <div className={`lgi-field ${emailFocus ? "lgi-field--focused" : ""}`}>
-            <label className="lgi-label" htmlFor="lgi-email">Email Address</label>
+          {error && <p className="lgi2-error">{error}</p>}
+
+          {/* Email field */}
+          <div className={`lgi2-field ${emailFocus ? "lgi2-field--focus" : ""}`}>
+            <label className="lgi2-label" htmlFor="lgi-email">Email Address</label>
             <input
               id="lgi-email"
               type="email"
-              className="lgi-input"
-              placeholder="name@venturescope.com"
+              className="lgi2-input"
+              placeholder="name@institution.com"
               value={email}
               onChange={e => setEmail(e.target.value)}
               onFocus={() => setEmailFocus(true)}
@@ -123,26 +112,26 @@ export default function LoginPage({ onLogin, onBack, onRequestAccess }) {
               autoComplete="email"
               required
             />
-            <div className="lgi-underline" />
+            <div className="lgi2-underline" />
           </div>
 
-          {/* Password */}
-          <div className={`lgi-field ${passFocus ? "lgi-field--focused" : ""}`}>
-            <div className="lgi-label-row">
-              <label className="lgi-label" htmlFor="lgi-password">Password</label>
+          {/* Password field */}
+          <div className={`lgi2-field ${passFocus ? "lgi2-field--focus" : ""}`}>
+            <div className="lgi2-label-row">
+              <label className="lgi2-label" htmlFor="lgi-password">Password</label>
               <button
                 type="button"
-                className="lgi-show-toggle"
+                className="lgi2-show-toggle"
                 onClick={() => setShowPass(p => !p)}
                 tabIndex={-1}
               >
-                {showPass ? "⊙ HIDE" : "⊙ SHOW"}
+                ⊙ {showPass ? "HIDE" : "SHOW"}
               </button>
             </div>
             <input
               id="lgi-password"
               type={showPass ? "text" : "password"}
-              className="lgi-input"
+              className="lgi2-input"
               placeholder="••••••••"
               value={password}
               onChange={e => setPassword(e.target.value)}
@@ -151,32 +140,64 @@ export default function LoginPage({ onLogin, onBack, onRequestAccess }) {
               autoComplete="current-password"
               required
             />
-            <div className="lgi-underline" />
+            <div className="lgi2-underline" />
           </div>
 
-          {/* Submit */}
+          {/* Sign in button */}
           <button
             id="lgi-submit"
             type="submit"
-            className={`lgi-submit ${loading ? "lgi-submit--loading" : ""}`}
+            className={`lgi2-submit ${loading ? "lgi2-submit--loading" : ""}`}
             disabled={loading}
           >
-            {loading ? <span className="lgi-spinner" /> : "SIGN IN"}
+            {loading ? <span className="lgi2-spinner" /> : "SIGN IN"}
           </button>
 
-          {/* Links */}
-          <button type="button" className="lgi-link" onClick={() => {}}>
+          {/* Forgot */}
+          <button type="button" className="lgi2-link" onClick={() => {}}>
             Forgot Username / Password?
           </button>
 
-          <p className="lgi-register">
-            Don&apos;t have an account?{" "}
-            <button type="button" className="lgi-link lgi-link--accent" onClick={onRequestAccess}>
-              Request Access
+          {/* Divider */}
+          <div style={{ borderTop: "1px solid rgba(240,232,216,0.1)", margin: "8px 0 20px" }} />
+
+          {/* Sign up row */}
+          <p className="lgi2-register">
+            Don&apos;t have an account?&nbsp;
+            <button
+              type="button"
+              className="lgi2-link lgi2-link--accent"
+              onClick={onRequestAccess}
+            >
+              SIGNUP
             </button>
           </p>
+
         </form>
       </main>
+
+      {/* ── FOOTER ───────────────────────────────────────────────────────── */}
+      <footer className="lgi2-footer">
+        <div className="lgi2-footer-inner">
+          <div className="lgi2-footer-left">
+            <span className="lgi2-footer-logo">VentureScope</span>
+            <p className="lgi2-footer-tagline">
+              Building the computational foundation for<br />
+              the next decade of venture capital.
+            </p>
+          </div>
+          <div className="lgi2-footer-right">
+            <nav className="lgi2-footer-nav">
+              {["Platform", "Privacy", "Terms"].map(l => (
+                <a key={l} href="#" className="lgi2-footer-link">{l}</a>
+              ))}
+            </nav>
+            <p className="lgi2-footer-copy">
+              © 2024 VentureScope AI — Designed for Excellence
+            </p>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

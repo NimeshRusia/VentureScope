@@ -1,317 +1,614 @@
-/* ── Login Page Styles ────────────────────────────────────────────────────── */
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400;1,600&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&family=JetBrains+Mono:wght@400;500&display=swap');
+/* ── Google Fonts ────────────────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400;1,500&family=Inter:wght@300;400;500;600&display=swap');
 
-.lgi-root {
-  --lgi-bg:       #0b0b0b;
-  --lgi-text:     #ede8e0;
-  --lgi-muted:    rgba(237,232,224,0.45);
-  --lgi-faint:    rgba(237,232,224,0.22);
-  --lgi-border:   rgba(237,232,224,0.14);
-  --lgi-accent:   #8b3e22;
-  --lgi-accent-h: #a34c2a;
-  --lgi-line:     rgba(237,232,224,0.18);
-  --lgi-line-hi:  rgba(237,232,224,0.55);
-  --lgi-font-d:   'Playfair Display', Georgia, serif;
-  --lgi-font-b:   'DM Sans', system-ui, sans-serif;
-  --lgi-font-m:   'JetBrains Mono', monospace;
+/* ── Root / page wrapper ─────────────────────────────────────────────────── */
+.lgi2-root {
+  --lgi2-bg:          #3D2614;       /* warm chocolate brown — matches reference */
+  --lgi2-surface:     #2E1C0D;       /* slightly darker brown for surfaces */
+  --lgi2-peach:       #E8A878;       /* warm salmon-peach accent */
+  --lgi2-peach-dim:   rgba(232, 168, 120, 0.7);
+  --lgi2-peach-faint: rgba(232, 168, 120, 0.12);
+  --lgi2-text:        #EDD5BA;       /* warm cream/ivory for primary text */
+  --lgi2-muted:       rgba(220, 190, 158, 0.6);  /* muted warm text */
+  --lgi2-faint:       rgba(210, 180, 148, 0.3);  /* very muted */
+  --lgi2-line:        rgba(210, 180, 148, 0.18); /* input underlines */
+  --lgi2-line-hi:     rgba(232, 168, 120, 0.5);  /* focused underline */
+  --lgi2-font-serif: 'Playfair Display', Georgia, serif;
+  --lgi2-font-sans:  'Inter', system-ui, sans-serif;
 
   position: relative;
   min-height: 100vh;
-  background-color: var(--lgi-bg);
-  color: var(--lgi-text);
-  font-family: var(--lgi-font-b);
-  overflow: hidden;
+  background-color: var(--lgi2-bg);
+  color: var(--lgi2-text);
+  font-family: var(--lgi2-font-sans);
   display: flex;
   flex-direction: column;
+  overflow-x: hidden;
 }
 
-/* ── Canvas ──────────────────────────────────────────────────────────────── */
-.lgi-canvas {
-  position: absolute;
+/* ── Background canvas ───────────────────────────────────────────────────── */
+.lgi2-bg-canvas {
+  position: fixed;
   inset: 0;
   width: 100%;
   height: 100%;
   pointer-events: none;
   z-index: 0;
-  opacity: 0.85;
+  opacity: 0.6;
 }
 
-/* ── Navbar ──────────────────────────────────────────────────────────────── */
-.lgi-nav {
+/* ── Nav ─────────────────────────────────────────────────────────────────── */
+.lgi2-nav {
   position: relative;
   z-index: 10;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 40px;
-  height: 52px;
-  border-bottom: 1px solid var(--lgi-border);
+  padding: 0 48px;
+  height: 56px;
+  border-bottom: 1px solid var(--lgi2-line);
 }
 
-.lgi-nav-logo {
-  font-family: var(--lgi-font-d);
-  font-size: 15px;
-  font-weight: 600;
+.lgi2-logo {
+  font-family: var(--lgi2-font-serif);
+  font-size: 24px;
+  font-weight: 700;
   font-style: normal;
-  color: var(--lgi-text);
+  color: #F5D5B8;
   background: none;
   border: none;
   cursor: pointer;
   padding: 0;
-  letter-spacing: 0.01em;
+  letter-spacing: normal;
+  text-transform: capitalize;
   transition: opacity 200ms ease;
 }
-.lgi-nav-logo:hover { opacity: 0.7; }
 
-.lgi-nav-status {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-family: var(--lgi-font-m);
+.lgi2-logo:hover { opacity: 0.75; }
+
+/* Nav bordered buttons (Login / Sign-Up pages) */
+.lgi2-nav-btn {
+  font-family: var(--lgi2-font-sans);
   font-size: 10px;
-  font-weight: 500;
-  letter-spacing: 0.12em;
-  color: var(--lgi-muted);
+  font-weight: 600;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
+  color: var(--lgi2-peach);
+  background: transparent;
+  border: 1px solid rgba(245, 213, 184, 0.45);
+  border-radius: 2px;
+  padding: 6px 18px;
+  cursor: pointer;
+  transition: background 180ms ease, border-color 180ms ease;
+}
+.lgi2-nav-btn:hover {
+  background: rgba(245, 213, 184, 0.08);
+  border-color: rgba(245, 213, 184, 0.7);
+}
+.lgi2-nav-btn--accent {
+  background: rgba(245, 213, 184, 0.1);
 }
 
-.lgi-status-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #4caf6e;
-  box-shadow: 0 0 6px rgba(76,175,110,0.7);
-  animation: lgi-blink 2.5s ease-in-out infinite;
-}
-
-@keyframes lgi-blink {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0.4; }
-}
-
-/* ── Main Layout ─────────────────────────────────────────────────────────── */
-.lgi-main {
+/* ── Main content area ───────────────────────────────────────────────────── */
+.lgi2-main {
   position: relative;
   z-index: 10;
   flex: 1;
   display: flex;
   align-items: center;
-  justify-content: flex-start;
-  padding: 0 0 0 min(14vw, 200px);
+  justify-content: center;
+  padding: 60px 24px;
 }
 
 /* ── Form ────────────────────────────────────────────────────────────────── */
-.lgi-form {
+.lgi2-form {
   width: 100%;
-  max-width: 360px;
+  max-width: 380px;
   display: flex;
   flex-direction: column;
-  gap: 0;
-  animation: lgi-fadein 0.55s cubic-bezier(0.16,1,0.3,1) both;
+  animation: lgi2FadeIn 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-@keyframes lgi-fadein {
+/* Sign-Up wider form */
+.lgi2-form--su {
+  max-width: 480px;
+}
+
+/* Sign-Up main area — top-aligned, more padding */
+.lgi2-main--signup {
+  align-items: center;
+  padding-top: 60px;
+  padding-bottom: 60px;
+}
+
+@keyframes lgi2FadeIn {
   from { opacity: 0; transform: translateY(16px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
-.lgi-heading {
-  font-family: var(--lgi-font-d);
-  font-size: 28px;
+/* ── Heading ─────────────────────────────────────────────────────────────── */
+.lgi2-heading {
+  font-family: var(--lgi2-font-serif);
+  font-size: 52px;
   font-weight: 400;
-  font-style: normal;
-  color: var(--lgi-text);
-  margin-bottom: 36px;
-  letter-spacing: -0.01em;
+  font-style: italic;
+  color: var(--lgi2-text);
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  margin-bottom: 14px;
+  text-align: center;
+}
+
+/* Sign-Up heading — smaller, single line */
+.lgi2-heading--su {
+  font-size: clamp(36px, 6vw, 48px);
+  margin-bottom: 20px;
+  white-space: nowrap;
+}
+
+.lgi2-subtitle {
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--lgi2-muted);
+  text-align: center;
+  line-height: 1.6;
+  margin-bottom: 44px;
+}
+
+/* Sign-Up subtitle — slightly smaller, more bottom margin */
+.lgi2-subtitle--su {
+  font-size: 9px;
+  margin-bottom: 40px;
+  max-width: 420px;
+  align-self: center;
 }
 
 /* ── Error ───────────────────────────────────────────────────────────────── */
-.lgi-error {
+.lgi2-error {
   font-size: 12px;
   color: #e05c3a;
   margin-bottom: 16px;
   letter-spacing: 0.02em;
+  text-align: center;
 }
 
 /* ── Field ───────────────────────────────────────────────────────────────── */
-.lgi-field {
+.lgi2-field {
   display: flex;
   flex-direction: column;
   margin-bottom: 32px;
-  position: relative;
 }
 
-.lgi-label-row {
+.lgi2-label-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 10px;
 }
 
-.lgi-label {
-  font-family: var(--lgi-font-b);
-  font-size: 10px;
-  font-weight: 500;
-  letter-spacing: 0.14em;
+.lgi2-label {
+  font-family: var(--lgi2-font-sans);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--lgi-muted);
+  color: var(--lgi2-muted);
   margin-bottom: 10px;
   display: block;
 }
 
-.lgi-label-row .lgi-label {
+.lgi2-label-row .lgi2-label {
   margin-bottom: 0;
 }
 
-.lgi-show-toggle {
-  font-family: var(--lgi-font-m);
+/* ── Input — underline only ──────────────────────────────────────────────── */
+.lgi2-input {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--lgi2-line);
+  outline: none;
+  color: var(--lgi2-text);
+  font-family: var(--lgi2-font-sans);
+  font-size: 14px;
+  font-weight: 300;
+  letter-spacing: 0.02em;
+  padding: 6px 0 10px;
+  width: 100%;
+  transition: border-color 220ms ease;
+}
+
+.lgi2-input::placeholder {
+  color: var(--lgi2-faint);
+  font-weight: 300;
+}
+
+.lgi2-input:focus {
+  border-bottom-color: transparent;
+}
+
+/* Animated underline */
+.lgi2-underline {
+  height: 1px;
+  background: var(--lgi2-line-hi);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 280ms cubic-bezier(0.16, 1, 0.3, 1);
+  margin-top: -1px;
+}
+
+.lgi2-field--focus .lgi2-underline {
+  transform: scaleX(1);
+}
+
+/* Show/hide toggle */
+.lgi2-show-toggle {
+  font-family: var(--lgi2-font-sans);
   font-size: 9.5px;
-  font-weight: 400;
-  letter-spacing: 0.1em;
-  color: var(--lgi-muted);
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--lgi2-muted);
   background: none;
   border: none;
   cursor: pointer;
   padding: 0;
   transition: color 180ms ease;
-  text-transform: uppercase;
-}
-.lgi-show-toggle:hover { color: var(--lgi-text); }
-
-/* ── Input (underline-only) ──────────────────────────────────────────────── */
-.lgi-input {
-  background: transparent;
-  border: none;
-  border-bottom: 1px solid var(--lgi-line);
-  outline: none;
-  color: var(--lgi-text);
-  font-family: var(--lgi-font-b);
-  font-size: 14px;
-  font-weight: 300;
-  padding: 6px 0 10px;
-  width: 100%;
-  transition: border-color 220ms ease;
-  letter-spacing: 0.02em;
 }
 
-.lgi-input::placeholder {
-  color: var(--lgi-faint);
-  font-weight: 300;
-}
+.lgi2-show-toggle:hover { color: var(--lgi2-peach-dim); }
 
-.lgi-input:focus {
-  border-bottom-color: transparent;
-}
-
-/* Animated underline */
-.lgi-underline {
-  height: 1px;
-  background: var(--lgi-line-hi);
-  transform: scaleX(0);
-  transform-origin: left;
-  transition: transform 280ms cubic-bezier(0.16,1,0.3,1);
-  margin-top: -1px;
-}
-
-.lgi-field--focused .lgi-underline {
-  transform: scaleX(1);
-}
-
-/* ── Submit ──────────────────────────────────────────────────────────────── */
-.lgi-submit {
+/* ── Submit button ───────────────────────────────────────────────────────── */
+.lgi2-submit {
   margin-top: 8px;
-  margin-bottom: 24px;
+  margin-bottom: 28px;
   width: 100%;
-  padding: 14px 0;
-  background: var(--lgi-accent);
+  padding: 15px 0;
+  background: var(--lgi2-peach);
   border: none;
-  border-radius: 3px;
-  color: #f5e8d8;
-  font-family: var(--lgi-font-b);
+  border-radius: 0;
+  color: #1A0A04;       /* very dark brown text on button */
+  font-family: var(--lgi2-font-sans);
   font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.14em;
+  font-weight: 700;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  transition: background 200ms ease, transform 180ms ease, box-shadow 200ms ease;
-  min-height: 46px;
+  min-height: 48px;
+  transition: background 200ms ease, transform 180ms ease;
 }
 
-.lgi-submit:hover:not(:disabled) {
-  background: var(--lgi-accent-h);
+.lgi2-submit:hover:not(:disabled) {
+  background: #FAEBD8;
   transform: translateY(-1px);
-  box-shadow: 0 6px 24px rgba(139,62,34,0.4);
+  box-shadow: 0 6px 28px rgba(245, 213, 184, 0.25);
 }
 
-.lgi-submit:active:not(:disabled) {
+.lgi2-submit:active:not(:disabled) {
   transform: translateY(0);
-  box-shadow: 0 2px 10px rgba(139,62,34,0.3);
 }
 
-.lgi-submit:disabled {
-  opacity: 0.75;
+.lgi2-submit:disabled {
+  opacity: 0.7;
   cursor: not-allowed;
 }
 
-/* Loading spinner inside button */
-.lgi-spinner {
+/* Spinner inside button */
+.lgi2-spinner {
   width: 16px;
   height: 16px;
-  border: 2px solid rgba(245,232,216,0.3);
-  border-top-color: #f5e8d8;
+  border: 2px solid rgba(26, 14, 6, 0.25);
+  border-top-color: #1A0E06;
   border-radius: 50%;
-  animation: lgi-spin 0.65s linear infinite;
+  animation: lgi2Spin 0.65s linear infinite;
 }
 
-@keyframes lgi-spin {
+@keyframes lgi2Spin {
   to { transform: rotate(360deg); }
 }
 
-/* ── Text Links ──────────────────────────────────────────────────────────── */
-.lgi-link {
-  font-family: var(--lgi-font-b);
-  font-size: 12.5px;
-  font-weight: 400;
-  color: var(--lgi-muted);
+/* ── Text links ──────────────────────────────────────────────────────────── */
+.lgi2-link {
+  font-family: var(--lgi2-font-sans);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--lgi2-muted);
   background: none;
   border: none;
   padding: 0;
   cursor: pointer;
-  text-align: left;
+  text-align: center;
   transition: color 180ms ease;
-  margin-bottom: 16px;
-  letter-spacing: 0.01em;
+  margin-bottom: 20px;
+  display: block;
 }
-.lgi-link:hover { color: var(--lgi-text); }
 
-.lgi-link--accent {
-  color: #c07050;
+.lgi2-link:hover { color: var(--lgi2-peach-dim); }
+
+.lgi2-link--accent {
+  display: inline;
+  color: var(--lgi2-peach);
   margin-bottom: 0;
-  font-weight: 500;
+  font-weight: 600;
 }
-.lgi-link--accent:hover { color: #d48060; }
 
-.lgi-register {
-  font-size: 12.5px;
-  color: var(--lgi-muted);
+.lgi2-link--accent:hover { color: var(--lgi2-text); }
+
+.lgi2-register {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--lgi2-muted);
+  text-align: center;
   display: flex;
   align-items: center;
-  gap: 5px;
+  justify-content: center;
+  gap: 6px;
   flex-wrap: wrap;
 }
 
+/* ── Footer ──────────────────────────────────────────────────────────────── */
+.lgi2-footer {
+  position: relative;
+  z-index: 10;
+  border-top: 1px solid rgba(210, 180, 148, 0.12);
+  background: #261508;  /* darker warm brown for footer contrast */
+}
+
+.lgi2-footer-inner {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 40px 48px 44px;
+  gap: 40px;
+  flex-wrap: wrap;
+}
+
+.lgi2-footer-logo {
+  font-family: var(--lgi2-font-serif);
+  font-size: 20px;
+  font-weight: 700;
+  font-style: normal;
+  color: #F5D5B8;
+  display: block;
+  margin-bottom: 12px;
+  letter-spacing: normal;
+  text-transform: capitalize;
+}
+
+.lgi2-footer-tagline {
+  font-family: var(--lgi2-font-sans);
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--lgi2-muted);
+  line-height: 1.7;
+  max-width: 280px;
+}
+
+.lgi2-footer-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 14px;
+}
+
+.lgi2-footer-nav {
+  display: flex;
+  gap: 32px;
+  align-items: center;
+}
+
+.lgi2-footer-link {
+  font-family: var(--lgi2-font-sans);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--lgi2-muted);
+  text-decoration: none;
+  transition: color 180ms ease;
+}
+
+.lgi2-footer-link:hover { color: var(--lgi2-peach-dim); }
+
+.lgi2-footer-copy {
+  font-family: var(--lgi2-font-sans);
+  font-size: 9.5px;
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--lgi2-faint);
+}
+
+/* Security note in footer (Sign-Up page) */
+.lgi2-footer-security {
+  font-family: var(--lgi2-font-sans);
+  font-size: 9px;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(240,232,216,0.2);
+  margin-top: 8px;
+  max-width: 380px;
+  text-align: right;
+  line-height: 1.6;
+}
+
 /* ── Responsive ──────────────────────────────────────────────────────────── */
-@media (max-width: 768px) {
-  .lgi-nav { padding: 0 20px; }
-  .lgi-main {
-    justify-content: center;
-    padding: 40px 24px;
-    align-items: flex-start;
-    padding-top: 60px;
+@media (max-width: 600px) {
+  .lgi2-nav  { padding: 0 20px; }
+  .lgi2-main { padding: 40px 24px; }
+  .lgi2-heading { font-size: 40px; }
+  .lgi2-footer-inner { padding: 32px 20px 36px; }
+  .lgi2-footer-right { align-items: flex-start; }
+  .lgi2-footer-nav { gap: 20px; }
+}
+
+/* ── OTP boxes (SignUpPage verification step) ────────────────────────────── */
+.lgi2-otp-row {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+
+.lgi2-otp-box {
+  width: 46px;
+  height: 54px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--lgi2-line);
+  color: var(--lgi2-text);
+  font-family: var(--lgi2-font-sans);
+  font-size: 24px;
+  font-weight: 400;
+  text-align: center;
+  outline: none;
+  transition: border-color 200ms ease;
+  caret-color: transparent;
+  border-radius: 0;
+}
+
+.lgi2-otp-box:focus {
+  border-bottom-color: var(--lgi2-line-hi);
+}
+
+.lgi2-otp-box:not(:placeholder-shown) {
+  border-bottom-color: rgba(245, 213, 184, 0.4);
+}
+
+@media (max-width: 480px) {
+  .lgi2-otp-box { width: 38px; height: 46px; font-size: 20px; }
+  .lgi2-otp-row { gap: 8px; }
+}
+
+/* ── Sign-up page extras ─────────────────────────────────────────────────── */
+
+/* Wider form for the create-account layout */
+.lgi2-form--wide {
+  max-width: 480px;
+}
+
+/* Two-column name grid */
+.lgi2-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 28px;
+}
+
+/* Checkbox consent row */
+.lgi2-checkbox-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 28px;
+  cursor: pointer;
+}
+
+.lgi2-checkbox {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 15px;
+  height: 15px;
+  border: 1px solid var(--lgi2-line-hi);
+  border-radius: 3px;
+  background: transparent;
+  flex-shrink: 0;
+  margin-top: 2px;
+  cursor: pointer;
+  transition: background 180ms ease, border-color 180ms ease;
+  position: relative;
+}
+
+.lgi2-checkbox:checked {
+  background: var(--lgi2-peach);
+  border-color: var(--lgi2-peach);
+}
+
+.lgi2-checkbox:checked::after {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 1px;
+  width: 5px;
+  height: 9px;
+  border: 2px solid #1A0E06;
+  border-top: none;
+  border-left: none;
+  transform: rotate(45deg);
+}
+
+.lgi2-checkbox-label {
+  font-family: var(--lgi2-font-sans);
+  font-size: 11.5px;
+  font-weight: 400;
+  color: var(--lgi2-muted);
+  line-height: 1.65;
+}
+
+/* Inline links inside label text */
+.lgi2-inline-link {
+  color: var(--lgi2-peach-dim);
+  text-decoration: underline;
+  text-decoration-color: rgba(245, 213, 184, 0.3);
+  text-underline-offset: 2px;
+  transition: color 180ms ease;
+}
+
+.lgi2-inline-link:hover {
+  color: var(--lgi2-peach);
+}
+
+/* Security encryption note */
+.lgi2-security-note {
+  font-family: var(--lgi2-font-sans);
+  font-size: 10.5px;
+  font-weight: 400;
+  color: var(--lgi2-faint);
+  text-align: center;
+  line-height: 1.7;
+  letter-spacing: 0.01em;
+  margin-bottom: 24px;
+}
+
+/* In-form footer row (copyright + links) */
+.lgi2-su-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 16px;
+  border-top: 1px solid var(--lgi2-line);
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.lgi2-su-footer-copy {
+  font-family: var(--lgi2-font-sans);
+  font-size: 10px;
+  color: var(--lgi2-faint);
+  letter-spacing: 0.06em;
+}
+
+.lgi2-su-footer-links {
+  display: flex;
+  gap: 20px;
+}
+
+/* Responsive: stack name fields on small screens */
+@media (max-width: 520px) {
+  .lgi2-grid-2 {
+    grid-template-columns: 1fr;
+    gap: 0;
   }
-  .lgi-form { max-width: 100%; }
+  .lgi2-form--wide {
+    max-width: 100%;
+  }
 }

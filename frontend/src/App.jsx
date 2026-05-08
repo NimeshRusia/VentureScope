@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { supabase } from "./lib/supabase";
 
-// ── Import all new + existing components ────────────────────────────────────
+// ── Components ───────────────────────────────────────────────────────────────
 import Navbar       from "./components/Navbar";
 import Sidebar      from "./components/Sidebar";
-import TabNav, { TABS } from "./components/TabNav";
+import TabNav       from "./components/TabNav";
 import { GapRadar } from "./components/GapRadar";
 import { CopilotChat } from "./components/CopilotChat";
 import InvestorIntel  from "./components/InvestorIntel";
@@ -13,100 +14,327 @@ import HeartbeatLog   from "./components/HeartbeatLog";
 
 import { getContext, getOpportunities, updateContext, API_BASE_URL } from './lib/api';
 
-// ── Your existing API base URL constant (keep as-is from your current App.jsx) ──
 const API_BASE = API_BASE_URL || "http://localhost:8000";
 
-export default function App() {
+// ─────────────────────────────────────────────────────────────────────────────
+// user_domains helpers
+// Table: { id, user_id, domain, added_at, gap_score }
+// ─────────────────────────────────────────────────────────────────────────────
 
-  // ── Sidebar open state (for mobile drawer) ──────────────────────────────
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+/**
+ * Fetch all domain rows for a given user, ordered by when they were added.
+ * Returns { names: string[], meta: { [domain]: { added_at, gap_score } } }
+ */
+async function fetchUserDomains(userId) {
+  const { data, error } = await supabase
+    .from("user_domains")
+    .select("domain, added_at, gap_score")
+    .eq("user_id", userId)
+    .order("added_at", { ascending: true });
 
-  // ── Active tab state ─────────────────────────────────────────────────────
-  const [activeTab, setActiveTab] = useState("radar");
+  if (error) {
+    console.error("[VentureScope] fetchUserDomains error:", error.message);
+    return { names: [], meta: {} };
+  }
 
-  // ── Loading and Error state ──────────────────────────────────────────────
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [context, setContext] = useState(null);
-
-  // ── SOUL Context state (migrate from existing App.jsx if not already here)
-  const [domains, setDomains]           = useState([]);
-  const [riskAppetite, setRiskAppetite] = useState("Medium");
-  const [isSaving, setIsSaving]         = useState(false);
-  const [lastSaved, setLastSaved]       = useState(null);
-
-  // ── Agent scan state ─────────────────────────────────────────────────────
-  const [isScanning, setIsScanning]     = useState(false);
-  const [lastUpdatedAt, setLastUpdatedAt] = useState(null);
-
-  // ── Pipeline run counter (persisted in localStorage) ────────────────────
-  const [pipelineRuns, setPipelineRuns] = useState(() => {
-    return parseInt(localStorage.getItem("vs_pipeline_runs") || "0", 10);
+  const rows  = data || [];
+  const names = rows.map((r) => r.domain);
+  const meta  = {};
+  rows.forEach((r) => {
+    meta[r.domain] = { added_at: r.added_at, gap_score: r.gap_score ?? null };
   });
 
-  // ── Opportunities data (from your existing Supabase fetch) ───────────────
-  const [opportunities, setOpportunities] = useState([]);
+  return { names, meta };
+}
 
+// ─────────────────────────────────────────────────────────────────────────────
+// SOUL.md sync — fire-and-forget, non-critical
+// ─────────────────────────────────────────────────────────────────────────────
+async function pushSoulSync(domainNames, riskAppetite) {
+  try {
+    if (!supabase) return;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) return;
+
+    await fetch(`${API_BASE}/soul-sync`, {
+      method: "POST",
+      headers: {
+        "Content-Type":  "application/json",
+        "Authorization": `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ domains: domainNames, risk_appetite: riskAppetite }),
+    });
+  } catch (err) {
+    console.warn("[VentureScope] SOUL.md sync skipped:", err.message);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// App
+// ─────────────────────────────────────────────────────────────────────────────
+export default function App() {
+
+  // ── UI state ─────────────────────────────────────────────────────────────
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [activeTab,   setActiveTab]   = useState("radar");
+  const [copilotOpen, setCopilotOpen] = useState(false);
+  const copilotPanelRef = useRef(null);
+  const fabRef          = useRef(null);
+
+  // ── Data state ───────────────────────────────────────────────────────────
+  const [loading,       setLoading]       = useState(true);
+  const [error,         setError]         = useState(null);
+  const [context,       setContext]       = useState(null);
+  const [opportunities, setOpportunities] = useState([]);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState(null);
+
+  // ── SOUL Context state ───────────────────────────────────────────────────
+  // domains: string[]   — plain names consumed by all child components
+  // domainMeta: object  — { [name]: { added_at, gap_score } } for upserts
+  const [domains,       setDomains]       = useState([]);
+  const [domainMeta,    setDomainMeta]    = useState({});
+  const [riskAppetite,  setRiskAppetite]  = useState("medium");
+  const [isSaving,      setIsSaving]      = useState(false);
+  const [lastSaved,     setLastSaved]     = useState(null);
+
+  // ── Pipeline run counter ─────────────────────────────────────────────────
+  const [pipelineRuns, setPipelineRuns] = useState(() =>
+    parseInt(localStorage.getItem("vs_pipeline_runs") || "0", 10)
+  );
+
+  // ── Scan state ───────────────────────────────────────────────────────────
+  const [isScanning, setIsScanning] = useState(false);
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // loadDomainsForUser — called on initial mount AND on every SIGNED_IN event
+  // so User B's login always wipes User A's state and loads fresh data
+  // ─────────────────────────────────────────────────────────────────────────
+  const loadDomainsForUser = useCallback(async (userId) => {
+    const { names, meta } = await fetchUserDomains(userId);
+    setDomains(names);
+    setDomainMeta(meta);
+    console.log(
+      `[VentureScope] ✅ Restored ${names.length} domain(s) for user ${userId.slice(0, 8)}…`
+    );
+  }, []);
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Initialisation effect
+  // ─────────────────────────────────────────────────────────────────────────
   useEffect(() => {
     let mounted = true;
 
+    // ── Part A: Load dashboard data (opportunities, context) ─────────────
     async function loadDashboard() {
       try {
-        const [opportunityPayload, contextPayload] = await Promise.all([
+        const [oppPayload, ctx] = await Promise.all([
           getOpportunities().catch(() => ({ opportunities: [] })),
           getContext().catch(() => null),
         ]);
-
         if (!mounted) return;
 
-        const opps = opportunityPayload.opportunities || [];
+        const opps = oppPayload.opportunities || [];
         setOpportunities(opps);
-        setContext(contextPayload);
-        
+        setContext(ctx);
+
         if (opps.length > 0) {
           const mostRecent = opps.reduce((latest, opp) =>
-            new Date(opp.updated_at || opp.created_at) > new Date(latest.updated_at || latest.created_at) ? opp : latest
+            new Date(opp.updated_at || opp.created_at) >
+            new Date(latest.updated_at || latest.created_at)
+              ? opp : latest
           );
           setLastUpdatedAt(mostRecent.updated_at || mostRecent.created_at);
         }
+      } catch (err) {
+        if (mounted) console.error("[VentureScope] Dashboard load error:", err);
+      }
+    }
 
-        if (contextPayload?.soul?.profile?.user_profile) {
-          setDomains(contextPayload.soul.profile.user_profile.domains || []);
-          setRiskAppetite(contextPayload.soul.profile.user_profile.risk_appetite || 'medium');
-          setLastSaved(contextPayload.soul.profile.last_updated);
+    // ── Part B: Auth + domain fetch ────────────────────────────────────────
+    async function init() {
+      if (!supabase) {
+        await loadDashboard();
+        if (mounted) setLoading(false);
+        return;
+      }
+
+      // Check the current session synchronously first
+      const { data: { user }, error: authErr } = await supabase.auth.getUser();
+      if (!mounted) return;
+
+      if (authErr || !user) {
+        console.warn("[VentureScope] No session — redirecting to /login");
+        window.location.href = "/login";
+        return;
+      }
+
+      // Load this user's domain history from user_domains (source of truth)
+      await loadDomains(user.id);
+
+      // Load risk appetite from profiles
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("risk_appetite")
+        .eq("id", user.id)
+        .single();
+      if (mounted && profile?.risk_appetite) {
+        setRiskAppetite(profile.risk_appetite);
+      }
+
+      // Load shared dashboard data
+      await loadDashboard();
+
+      if (mounted) setLoading(false);
+    }
+
+    async function loadDomains(userId) {
+      if (!mounted) return;
+      await loadDomains_impl(userId);
+    }
+
+    async function loadDomains_impl(userId) {
+      const { names, meta } = await fetchUserDomains(userId);
+      if (!mounted) return;
+      setDomains(names);
+      setDomainMeta(meta);
+      console.log(`[VentureScope] ✅ Loaded ${names.length} domain(s) for user ${userId.slice(0, 8)}…`);
+    }
+
+    // ── Part C: Auth state listener ────────────────────────────────────────
+    // SIGNED_IN fires when:
+    //   • a fresh session starts (new login)
+    //   • the page reloads with an existing session
+    // This is the canonical trigger for loading per-user data.
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (!mounted) return;
+
+        if (event === "SIGNED_IN" && session?.user) {
+          // A (possibly different) user just signed in — load their data
+          const { names, meta } = await fetchUserDomains(session.user.id);
+          if (!mounted) return;
+          setDomains(names);
+          setDomainMeta(meta);
+          console.log(
+            `[VentureScope] ✅ onAuthStateChange: loaded ${names.length} domain(s) for ${session.user.id.slice(0, 8)}…`
+          );
         }
-      } catch (loadError) {
-        if (mounted) {
-          setError(loadError.message || 'Unable to load dashboard data');
+
+        if (event === "SIGNED_OUT") {
+          // ── Part 3: Clear local state only — NEVER delete from Supabase ──
+          // When User A returns, their rows are still in user_domains and
+          // will be fetched fresh on the next SIGNED_IN event.
+          setDomains([]);
+          setDomainMeta({});
+          setRiskAppetite("medium");
+          setOpportunities([]);
+          setContext(null);
+          if (mounted) window.location.href = "/login";
         }
-      } finally {
-        if (mounted) {
-          setLoading(false);
+      }
+    );
+
+    init();
+
+    return () => {
+      mounted = false;
+      authListener?.subscription?.unsubscribe();
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // SOUL Context handlers
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Part 1 — Write on Add:
+   * Immediately upsert { user_id, domain, added_at, gap_score } to user_domains.
+   * user_id is always pulled from the live session — never from client state.
+   */
+  const handleAddDomain = useCallback(async (domain) => {
+    const trimmed = domain.trim().toLowerCase();
+    if (!trimmed || domains.includes(trimmed)) return;
+
+    // Optimistic UI update so the sidebar feels instant
+    const nextDomains = [...domains, trimmed];
+    const nextMeta    = {
+      ...domainMeta,
+      [trimmed]: { added_at: new Date().toISOString(), gap_score: null },
+    };
+    setDomains(nextDomains);
+    setDomainMeta(nextMeta);
+
+    if (supabase) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        // ── Part 1: upsert to user_domains ──────────────────────────────
+        const { error } = await supabase
+          .from("user_domains")
+          .upsert(
+            {
+              user_id:  user.id,
+              domain:   trimmed,
+              added_at: nextMeta[trimmed].added_at,
+              gap_score: null,
+            },
+            { onConflict: "user_id,domain" }
+          );
+
+        if (error) {
+          console.error("[VentureScope] Failed to add domain to DB:", error.message);
         }
       }
     }
 
-    loadDashboard();
+    // Sync per-user SOUL.md for the pipeline (fire-and-forget)
+    pushSoulSync(nextDomains, riskAppetite);
+  }, [domains, domainMeta, riskAppetite]);
 
-    return () => {
-      mounted = false;
-    };
-  }, []);
+  /**
+   * Remove a domain — deletes the row from user_domains for this user only.
+   * Never touches any other user's rows (RLS enforces this server-side too).
+   */
+  const handleRemoveDomain = useCallback(async (domain) => {
+    const nextDomains = domains.filter((d) => d !== domain);
+    const nextMeta    = { ...domainMeta };
+    delete nextMeta[domain];
 
-  // ── SOUL context handlers ────────────────────────────────────────────────
+    setDomains(nextDomains);
+    setDomainMeta(nextMeta);
 
-  const handleAddDomain = useCallback((domain) => {
-    setDomains((prev) =>
-      prev.includes(domain) ? prev : [...prev, domain]
-    );
-  }, []);
+    if (supabase) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { error } = await supabase
+          .from("user_domains")
+          .delete()
+          .eq("user_id", user.id)
+          .eq("domain", domain);
 
-  const handleRemoveDomain = useCallback((domain) => {
-    setDomains((prev) => prev.filter((d) => d !== domain));
-  }, []);
+        if (error) {
+          console.error("[VentureScope] Failed to remove domain from DB:", error.message);
+        }
+      }
+    }
 
-  const handleChangeRisk = useCallback((level) => {
+    pushSoulSync(nextDomains, riskAppetite);
+  }, [domains, domainMeta, riskAppetite]);
+
+  const handleChangeRisk = useCallback(async (level) => {
     setRiskAppetite(level);
+    if (!supabase) return;
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      await supabase
+        .from("profiles")
+        .upsert(
+          { id: user.id, risk_appetite: level, updated_at: new Date().toISOString() },
+          { onConflict: "id" }
+        );
+      await supabase.auth.updateUser({ data: { risk_appetite: level } });
+    }
   }, []);
 
   const handleSaveSOUL = useCallback(async () => {
@@ -116,31 +344,49 @@ export default function App() {
       const nextUserProfile = {
         ...context?.soul?.profile?.user_profile,
         domains,
-        risk_appetite: riskAppetite
+        risk_appetite: riskAppetite,
       };
 
       const result = await updateContext(nextUserProfile);
       setContext(result);
       setLastSaved(new Date().toISOString());
 
-      // Fetch fresh radar data instantly after pipeline runs
+      // Refresh radar data
       const opResult = await getOpportunities().catch(() => ({ opportunities: [] }));
       const opps = opResult.opportunities || [];
       setOpportunities(opps);
-      
+
       if (opps.length > 0) {
         const mostRecent = opps.reduce((latest, opp) =>
-          new Date(opp.updated_at || opp.created_at) > new Date(latest.updated_at || latest.created_at) ? opp : latest
+          new Date(opp.updated_at || opp.created_at) >
+          new Date(latest.updated_at || latest.created_at)
+            ? opp : latest
         );
         setLastUpdatedAt(mostRecent.updated_at || mostRecent.created_at);
+
+        // Update gap_score in user_domains for matched domains
+        if (supabase) {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            for (const opp of opps) {
+              const name = opp.title?.toLowerCase();
+              if (name && domains.includes(name) && opp.score != null) {
+                await supabase
+                  .from("user_domains")
+                  .update({ gap_score: opp.score })
+                  .eq("user_id", user.id)
+                  .eq("domain", name);
+              }
+            }
+          }
+        }
       }
 
-      // After successful save, update pipeline run counter:
       const prev = parseInt(localStorage.getItem("vs_pipeline_runs") || "0", 10);
       const next = prev + 1;
       localStorage.setItem("vs_pipeline_runs", next.toString());
       setPipelineRuns(next);
-      
+
     } catch (err) {
       console.error("[VentureScope] Failed to save SOUL context:", err);
     } finally {
@@ -148,7 +394,7 @@ export default function App() {
     }
   }, [domains, riskAppetite, isSaving, context]);
 
-  // ── Trigger Scan handler ─────────────────────────────────────────────────
+  // ── Trigger Scan ─────────────────────────────────────────────────────────
   const handleTriggerScan = useCallback(async () => {
     if (isScanning || domains.length === 0) return;
     setIsScanning(true);
@@ -158,7 +404,9 @@ export default function App() {
       setOpportunities(opps);
       if (opps.length > 0) {
         const mostRecent = opps.reduce((latest, opp) =>
-          new Date(opp.updated_at || opp.created_at) > new Date(latest.updated_at || latest.created_at) ? opp : latest
+          new Date(opp.updated_at || opp.created_at) >
+          new Date(latest.updated_at || latest.created_at)
+            ? opp : latest
         );
         setLastUpdatedAt(mostRecent.updated_at || mostRecent.created_at);
       }
@@ -168,23 +416,55 @@ export default function App() {
     } finally {
       setIsScanning(false);
     }
-  }, [domains, riskAppetite, isScanning]);
+  }, [domains, isScanning]);
 
-  // ── Tab change handler ───────────────────────────────────────────────────
+  // ── Part 3 — Sign Out: clear local state, never delete from DB ───────────
+  const handleSignOut = useCallback(async () => {
+    setDomains([]);
+    setDomainMeta({});
+    setRiskAppetite("medium");
+    setOpportunities([]);
+    setContext(null);
+
+    if (supabase) await supabase.auth.signOut();
+    window.location.href = "/login";
+  }, []);
+
+  // ── Copilot FAB click-outside ────────────────────────────────────────────
+  useEffect(() => {
+    if (!copilotOpen) return;
+    const handleClickOutside = (e) => {
+      if (
+        copilotPanelRef.current &&
+        !copilotPanelRef.current.contains(e.target) &&
+        fabRef.current &&
+        !fabRef.current.contains(e.target)
+      ) {
+        setCopilotOpen(false);
+      }
+    };
+    const timer = setTimeout(() => document.addEventListener("mousedown", handleClickOutside), 10);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [copilotOpen]);
+
   const handleTabChange = useCallback((tabId) => {
     setActiveTab(tabId);
-    // Close sidebar on mobile when tab is changed
     setSidebarOpen(false);
   }, []);
 
-  // ── Render the active tab content ────────────────────────────────────────
+  // ── Tab content renderer ──────────────────────────────────────────────────
   const renderTabContent = () => {
     if (loading) {
       return (
         <div className="flex h-[400px] items-center justify-center rounded-2xl border border-[var(--border)] bg-[var(--panel)] m-6">
           <div className="flex flex-col items-center gap-4">
-            <span className="h-8 w-8 animate-spin-slow rounded-full border-2 border-[var(--aurora)] border-t-transparent"></span>
-            <span className="text-sm uppercase tracking-widest text-[var(--mist)]">Initializing Dashboard...</span>
+            <span className="h-8 w-8 animate-spin-slow rounded-full border-2 border-[var(--aurora)] border-t-transparent" />
+            <span className="text-sm uppercase tracking-widest text-[var(--mist)]">
+              Initializing Dashboard...
+            </span>
           </div>
         </div>
       );
@@ -197,65 +477,56 @@ export default function App() {
             <GapRadar
               opportunities={opportunities}
               riskAppetite={riskAppetite}
+              domains={domains}
+              onRemoveDomain={handleRemoveDomain}
             />
           </div>
         );
-
-      case "copilot":
-        return null; // Rendered persistently outside switch to preserve chat history
-
       case "intel":
         return (
           <div key="intel" className="animate-tab-enter" style={{ padding: "24px" }}>
             <InvestorIntel domains={domains} opportunities={opportunities} />
           </div>
         );
-
       case "digest":
         return (
           <div key="digest" className="animate-tab-enter" style={{ padding: "24px" }}>
-            <WeeklyDigest />
+            <WeeklyDigest domains={domains} riskAppetite={riskAppetite} opportunities={opportunities} />
           </div>
         );
-
       case "cofounder":
         return (
           <div key="cofounder" className="animate-tab-enter" style={{ padding: "24px" }}>
             <CoFounderMatch />
           </div>
         );
-
       case "heartbeat":
         return (
           <div key="heartbeat" className="animate-tab-enter" style={{ padding: "24px" }}>
             <HeartbeatLog />
           </div>
         );
-
       default:
         return null;
     }
   };
 
-  // ── Main render ──────────────────────────────────────────────────────────
+  // ── Main render ───────────────────────────────────────────────────────────
   return (
     <>
-      {/* Fixed top navbar */}
       <Navbar
         apiBase={API_BASE}
         isSidebarOpen={sidebarOpen}
-        onToggleSidebar={() => setSidebarOpen((prev) => !prev)}
+        onToggleSidebar={() => setSidebarOpen((p) => !p)}
+        onSignOut={handleSignOut}
       />
 
-      {/* Fixed left sidebar */}
       <Sidebar
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
-        // Agent status
         lastUpdatedAt={lastUpdatedAt}
         onTriggerScan={handleTriggerScan}
         isScanning={isScanning}
-        // SOUL context
         domains={domains}
         riskAppetite={riskAppetite}
         onAddDomain={handleAddDomain}
@@ -264,13 +535,11 @@ export default function App() {
         onSave={handleSaveSOUL}
         isSaving={isSaving}
         lastSaved={lastSaved}
-        // System stats
         signalsCount={opportunities.length}
         domainsCount={domains.length}
         pipelineRuns={pipelineRuns}
       />
 
-      {/* Main content area — offset by navbar height and sidebar width */}
       <main
         style={{
           marginTop: "var(--navbar-height)",
@@ -278,48 +547,48 @@ export default function App() {
           minHeight: "calc(100vh - var(--navbar-height))",
           display: "flex",
           flexDirection: "column",
-          // On mobile, sidebar doesn't push content — it overlays
         }}
       >
         <style>{`
-          @media (max-width: 767px) {
-            main { margin-left: 0 !important; }
-          }
-          @media (min-width: 768px) and (max-width: 1100px) {
-            main { margin-left: 240px !important; }
-          }
+          @media (max-width: 767px)               { main { margin-left: 0 !important; } }
+          @media (min-width: 768px) and (max-width: 1100px) { main { margin-left: 240px !important; } }
         `}</style>
 
-        {/* Sticky tab navigation */}
         <div style={{ position: "sticky", top: "var(--navbar-height)", zIndex: 50 }}>
           <TabNav activeTab={activeTab} onTabChange={handleTabChange} />
         </div>
 
-        {/* Tab panel content — scrollable */}
         <div style={{ flex: 1, overflowY: "auto" }}>
-          {error && <p style={{ color: "var(--danger)", padding: "24px", textAlign: "center" }}>{error}</p>}
-          
-          {/* Always mount CopilotChat to preserve chat history, but hide it if not active */}
-          <div style={{ display: !loading && activeTab === "copilot" ? "block" : "none", height: "100%" }}>
-            <div
-              className={activeTab === "copilot" ? "animate-tab-enter" : ""}
-              style={{
-                padding: "0",
-                height: "calc(100vh - var(--navbar-height) - 53px)", // subtract tab nav height
-                display: "flex",
-                flexDirection: "column",
-              }}
-            >
-              <CopilotChat
-                apiBase={API_BASE}
-                domains={domains}
-              />
-            </div>
-          </div>
-
+          {error && (
+            <p style={{ color: "var(--danger)", padding: "24px", textAlign: "center" }}>{error}</p>
+          )}
           {renderTabContent()}
         </div>
       </main>
+
+      {!loading && (
+        <>
+          <button
+            ref={fabRef}
+            id="copilot-fab"
+            aria-label={copilotOpen ? "Close Venture Copilot" : "Open Venture Copilot"}
+            aria-expanded={copilotOpen}
+            onClick={() => setCopilotOpen((p) => !p)}
+            className={pipelineRuns > 0 ? "vs-fab vs-fab--pulsing" : "vs-fab"}
+          >
+            <span style={{ fontSize: "24px", lineHeight: 1 }}>⚡</span>
+          </button>
+
+          <div
+            ref={copilotPanelRef}
+            id="copilot-panel"
+            aria-hidden={!copilotOpen}
+            className={copilotOpen ? "vs-copilot-panel vs-copilot-panel--open" : "vs-copilot-panel vs-copilot-panel--closed"}
+          >
+            <CopilotChat apiBase={API_BASE} domains={domains} />
+          </div>
+        </>
+      )}
     </>
   );
 }

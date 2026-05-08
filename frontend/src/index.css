@@ -702,3 +702,143 @@ body {
   background: rgba(117, 86, 63, 0.25);
   color: var(--cream);
 }
+
+/* ─── Copilot FAB ────────────────────────────────────────────────────────────── */
+@keyframes fabPulseRing {
+  0% {
+    box-shadow:
+      0 4px 24px rgba(117, 86, 63, 0.45),
+      0 0 0 0 rgba(117, 86, 63, 0.55);
+  }
+  60% {
+    box-shadow:
+      0 4px 24px rgba(117, 86, 63, 0.45),
+      0 0 0 12px rgba(117, 86, 63, 0);
+  }
+  100% {
+    box-shadow:
+      0 4px 24px rgba(117, 86, 63, 0.45),
+      0 0 0 0 rgba(117, 86, 63, 0);
+  }
+}
+
+.vs-fab {
+  /* Position */
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9000;
+
+  /* Shape */
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: none;
+
+  /* Color — matches the "Save to SOUL" gradient */
+  background: linear-gradient(135deg, var(--amber) 0%, var(--amber-dark) 100%);
+  color: #DCCBBE;
+
+  /* Layout */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+
+  /* Elevation */
+  box-shadow: 0 4px 24px rgba(117, 86, 63, 0.45);
+
+  /* Interactions */
+  transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease;
+}
+
+.vs-fab:hover {
+  transform: scale(1.08) translateY(-2px);
+  background: linear-gradient(135deg, var(--amber-light) 0%, var(--amber) 100%);
+  box-shadow: 0 8px 32px rgba(117, 86, 63, 0.6);
+}
+
+.vs-fab:active {
+  transform: scale(0.96);
+}
+
+/* Pipeline-live pulse ring — only when pipelineRuns > 0 */
+.vs-fab--pulsing {
+  animation: fabPulseRing 2.2s ease-out infinite;
+}
+
+/* ─── Copilot Floating Panel ─────────────────────────────────────────────────── */
+@keyframes copilotSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes copilotSlideDown {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(20px) scale(0.97);
+  }
+}
+
+.vs-copilot-panel {
+  /* Position — sits directly above the FAB */
+  position: fixed;
+  bottom: 96px;   /* 24px gap + 56px FAB + 16px breathing room */
+  right: 24px;
+  z-index: 8999;
+
+  /* Size */
+  width: 420px;
+  height: 560px;
+
+  /* Appearance */
+  background: var(--panel);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  box-shadow:
+    0 16px 48px rgba(117, 86, 63, 0.25),
+    0 4px 16px rgba(117, 86, 63, 0.15),
+    0 0 0 1px rgba(117, 86, 63, 0.08);
+
+  /* Default: hidden */
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.vs-copilot-panel--open {
+  pointer-events: auto;
+  visibility: visible;
+  animation: copilotSlideUp 200ms ease both;
+}
+
+.vs-copilot-panel--closed {
+  pointer-events: none;
+  /* play the close animation, then hide */
+  animation: copilotSlideDown 200ms ease both;
+  /* keep it invisible after close animation ends */
+  animation-fill-mode: forwards;
+}
+
+/* Responsive: on narrow viewports, expand panel to full width above FAB */
+@media (max-width: 480px) {
+  .vs-copilot-panel {
+    width: calc(100vw - 16px);
+    right: 8px;
+    bottom: 88px;
+  }
+  .vs-fab {
+    right: 16px;
+    bottom: 16px;
+  }
+}

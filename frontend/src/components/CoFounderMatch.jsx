@@ -4,67 +4,46 @@ import { useState } from "react";
 const MOCK_USERS = [
   {
     id: 1,
-    name: "Arjun Mehta",
-    role: "AI Developer",
-    avatar: "AM",
-    skills: ["Machine Learning", "Python", "NLP"],
-    interests: ["Healthcare AI", "EdTech", "LegalTech"],
-    savedIdeas: ["AI Diagnostics Tool", "Smart Triage System"],
-    matchScore: 92,
-    mutualDomain: "Healthcare AI",
-    bio: "Building intelligent systems that solve real-world problems.",
+    name: "Cristobal Valenzuela",
+    role: "CEO @ Runway | AI Researcher",
+    avatar: "CR",
+    skills: ["Stable Diffusion", "PyTorch", "Latent Video Diffusion"],
+    matchScore: 98,
+    mutualDomain: "Generative Video & Creative Suite",
+    bio: "Pioneer in bringing generative AI to professional cinema. Developing high-fidelity video-to-video tools for Hollywood studios.",
     status: "Actively looking",
   },
   {
     id: 2,
-    name: "Priya Sharma",
-    role: "MBA Student",
-    avatar: "PS",
-    skills: ["Business Strategy", "Fundraising", "Marketing"],
-    interests: ["Healthcare AI", "FinTech", "SaaS"],
-    savedIdeas: ["Hospital Operations Platform", "AI Diagnostics Tool"],
-    matchScore: 88,
-    mutualDomain: "Healthcare AI",
-    bio: "Turning bold ideas into fundable, scalable businesses.",
+    name: "Uma Valeti",
+    role: "Founder @ Upside Foods | Cardiologist",
+    avatar: "UV",
+    skills: ["Tissue Engineering", "Molecular Biology", "Bioprocess Scaling"],
+    matchScore: 91,
+    mutualDomain: "Cultivated Meat & Cellular Agriculture",
+    bio: "Scaling real meat production from animal cells. Focusing on high-yield bioreactor efficiency and FDA safety approval.",
     status: "Actively looking",
   },
   {
     id: 3,
-    name: "Rohan Verma",
-    role: "Full Stack Developer",
-    avatar: "RV",
-    skills: ["React", "Node.js", "System Design"],
-    interests: ["EdTech", "SaaS", "Developer Tools"],
-    savedIdeas: ["AI Tutor Platform", "Code Review Bot"],
-    matchScore: 79,
-    mutualDomain: "EdTech",
-    bio: "Passionate about shipping products users actually love.",
+    name: "Assaf Rappaport",
+    role: "CEO @ Wiz | Ex-Microsoft Security",
+    avatar: "AR",
+    skills: ["Graph Theory", "AWS/Azure Security", "Threat Detection"],
+    matchScore: 87,
+    mutualDomain: "Cloud-Native Security & Zero Trust",
+    bio: "Revolutionizing cloud security by identifying critical attack paths across multi-cloud environments.",
     status: "Open to chat",
   },
   {
     id: 4,
-    name: "Sneha Kapoor",
-    role: "UX Designer",
-    avatar: "SK",
-    skills: ["UI/UX", "Figma", "User Research"],
-    interests: ["FinTech", "Healthcare AI", "Consumer Apps"],
-    savedIdeas: ["Personal Finance App", "Smart Triage System"],
-    matchScore: 74,
-    mutualDomain: "FinTech",
-    bio: "Design is not just how it looks — it's how it works.",
-    status: "Open to chat",
-  },
-  {
-    id: 5,
-    name: "Karan Nair",
-    role: "Growth Marketer",
-    avatar: "KN",
-    skills: ["SEO", "Content Strategy", "Paid Ads"],
-    interests: ["D2C", "SaaS", "EdTech"],
-    savedIdeas: ["AI Tutor Platform", "Newsletter Monetization Tool"],
-    matchScore: 68,
-    mutualDomain: "SaaS",
-    bio: "I turn 0-to-1 startups into brands people remember.",
+    name: "Ali Ghodsi",
+    role: "CEO @ Databricks | UC Berkeley Researcher",
+    avatar: "AG",
+    skills: ["Apache Spark", "Distributed Systems", "Cloud Data Architecture"],
+    matchScore: 84,
+    mutualDomain: "Unified Data & AI (Lakehouse Architecture)",
+    bio: "Leading the shift from traditional data warehouses to unified platforms for BI and Machine Learning.",
     status: "Exploring",
   },
 ];
@@ -97,7 +76,7 @@ function Toast({ visible, onDismiss }) {
       borderRadius: "var(--radius-md)", padding: "12px 18px", marginBottom: "24px", gap: "12px",
     }}>
       <span style={{ fontSize: "13px", color: "var(--cream)" }}>
-        💡 <strong>2 people</strong> are also exploring <strong>Healthcare AI</strong> — your top interest.
+        💡 <strong>1 person</strong> is also exploring <strong>Generative Video & Creative Suite</strong> — your top interest.
       </span>
       <button onClick={onDismiss} style={{
         background: "transparent", border: "none", color: "var(--fog)",
@@ -248,9 +227,8 @@ export default function CoFounderMatch() {
           <span style={{
             fontFamily: "var(--font-mono)", fontSize: "11px", fontWeight: "600",
             background: "rgba(117,86,63,0.15)", border: "1px solid rgba(117,86,63,0.4)",
-            color: "var(--brown)", padding: "3px 10px", borderRadius: "var(--radius-pill)",
           }}>
-            🤝 5 people exploring similar opportunities
+            🤝 {MOCK_USERS.length} people exploring similar opportunities
           </span>
         </div>
         <p style={{ fontSize: "14px", color: "var(--fog)", lineHeight: "1.6" }}>

@@ -24,3 +24,10 @@ Thumbs.db
 
 # logs
 *.log
+
+# Per-user SOUL context files (personal data — never commit)
+openclaw/souls/user-*.md
+
+# Local Supabase migrations (run in dashboard, not version controlled)
+supabase_migration.sql
+supabase_user_domains.sql

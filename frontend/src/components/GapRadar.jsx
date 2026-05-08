@@ -205,7 +205,7 @@ function ResearchPanel({ opp, onClose }) {
   );
 }
 
-export function GapRadar({ opportunities = [], riskAppetite = 'medium' }) {
+export function GapRadar({ opportunities = [], riskAppetite = 'medium', domains = [], onRemoveDomain }) {
   const [hoveredData, setHoveredData] = useState(null);
   const [tooltipPos, setTooltipPos] = useState(null);
   const [exploredId, setExploredId] = useState(null);
@@ -257,24 +257,72 @@ export function GapRadar({ opportunities = [], riskAppetite = 'medium' }) {
 
   return (
     <div className="relative rounded-[24px] p-6" style={{ position: "relative", background: "#5a3d28", border: "1px solid rgba(220,203,190,0.12)", boxShadow: "0 8px 32px rgba(42,20,8,0.25)" }}>
-      <div className="mb-2 flex items-center justify-between">
-        <div>
-          <h2 style={{ fontFamily: "var(--font-display)", fontSize: "24px", fontWeight: "700", color: "#DCCBBE", marginBottom: "4px" }}>Market Landscape</h2>
-          <p style={{ fontSize: "13px", color: "rgba(220,203,190,0.6)" }}>
-            Multi-dimensional analysis for top domains.
-          </p>
-        </div>
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-            {radarData.map((dItem, idx) => {
-                if (dItem.domain === 'No data') return null;
-                const color = idx === 0 ? "#DCCBBE" : idx === 1 ? "#c8a87a" : "#a8856a";
-                return (
-                    <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <span style={{ width: '10px', height: '10px', background: color, borderRadius: '50%', border: `1px solid ${color}` }}></span>
-                        <span style={{ fontSize: '11px', color: 'rgba(220,203,190,0.55)', fontFamily: 'var(--font-mono)' }}>{dItem.domain.toUpperCase()}</span>
-                    </div>
-                )
-            })}
+      {/* ── Header ── */}
+      <div style={{ marginBottom: '16px' }}>
+        <h2 style={{ fontFamily: "var(--font-display)", fontSize: "24px", fontWeight: "700", color: "#DCCBBE", marginBottom: "4px" }}>Market Landscape</h2>
+        <p style={{ fontSize: "13px", color: "rgba(220,203,190,0.6)", marginBottom: '14px' }}>
+          Multi-dimensional analysis for your tracked domains.
+        </p>
+
+        {/* ── Domain Token Pills — source of truth: Supabase profiles.tracked_domains ── */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', minHeight: '32px' }}>
+          {domains.length === 0 ? (
+            <span style={{
+              fontSize: '12px',
+              color: 'rgba(245,213,184,0.35)',
+              fontFamily: 'var(--font-mono)',
+              fontStyle: 'italic',
+              letterSpacing: '0.04em',
+            }}>No domains tracked — add one in the sidebar</span>
+          ) : (
+            domains.map((domain) => (
+              <span
+                key={domain}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '4px 12px',
+                  borderRadius: '9999px',
+                  border: '1px solid rgba(245,213,184,0.35)',
+                  background: 'rgba(245,213,184,0.07)',
+                  color: '#F5D5B8',
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: '11.5px',
+                  fontWeight: '500',
+                  letterSpacing: '0.05em',
+                  textTransform: 'uppercase',
+                  transition: 'background 150ms ease, border-color 150ms ease',
+                  cursor: 'default',
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(245,213,184,0.13)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'rgba(245,213,184,0.07)'}
+              >
+                {domain}
+                {onRemoveDomain && (
+                  <button
+                    onClick={() => onRemoveDomain(domain)}
+                    title={`Remove ${domain}`}
+                    aria-label={`Remove ${domain}`}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'rgba(245,213,184,0.45)',
+                      cursor: 'pointer',
+                      fontSize: '13px',
+                      lineHeight: 1,
+                      padding: '0 0 0 2px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      transition: 'color 150ms ease',
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.color = '#F5D5B8'}
+                    onMouseLeave={e => e.currentTarget.style.color = 'rgba(245,213,184,0.45)'}
+                  >×</button>
+                )}
+              </span>
+            ))
+          )}
         </div>
       </div>
 

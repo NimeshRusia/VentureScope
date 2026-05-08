@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { API_BASE_URL } from "../lib/api";
+import { API_BASE_URL, updateContext } from "../lib/api";
 
 const API_BASE = API_BASE_URL || "http://localhost:8000";
 
@@ -105,7 +105,7 @@ function OpportunityRow({ opp, index }) {
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
-export default function WeeklyDigest() {
+export default function WeeklyDigest({ domains = [], riskAppetite = "medium", opportunities = [] }) {
   const [digest, setDigest] = useState(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
@@ -132,6 +132,10 @@ export default function WeeklyDigest() {
   const handleGenerate = async () => {
     setGenerating(true);
     try {
+      // 1. Sync the current user's SOUL context to the backend
+      await updateContext({ domains, risk_appetite: riskAppetite });
+
+      // 2. Trigger the digest generation
       const res = await fetch(`${API_BASE}/digest/generate`, { method: "POST" });
       if (!res.ok) throw new Error(await res.text());
       await fetchDigest();
@@ -142,13 +146,37 @@ export default function WeeklyDigest() {
     }
   };
 
-  const filteredOpps = digest?.opportunities?.filter(opp => {
-    if (filter === "All") return true;
-    if (filter === "Strong") return opp.signal === "STRONG_WHITESPACE";
-    if (filter === "Moderate") return opp.signal === "MODERATE";
-    if (filter === "Saturated") return opp.signal === "SATURATED";
+  // ── Compute Live Opportunities ─────────────────────────────────────────────
+  // To show digest data strictly on whatever domains are currently selected,
+  // we compute the table data live from the global opportunities array.
+  const liveOpps = opportunities
+    .filter(opp => {
+      if (domains.length === 0) return true; // Show all if no filter
+      const oppDomain = (opp.domain || opp.title || opp.name || "").toLowerCase();
+      return domains.some(d => oppDomain.includes(d.toLowerCase()) || d.toLowerCase().includes(oppDomain));
+    })
+    .sort((a, b) => (Number(b.score) || 0) - (Number(a.score) || 0))
+    .map((opp, i) => {
+      const score = Number(opp.score ?? 0);
+      const signal = score >= 70 ? 'STRONG_WHITESPACE' : score >= 40 ? 'MODERATE' : 'SATURATED';
+      const action = score >= 70 ? 'Explore & Validate' : score >= 40 ? 'Monitor Closely' : 'Deprioritize';
+      const trend = i % 3 === 0 ? '↑ Rising' : i % 3 === 1 ? '→ Stable' : '↓ Cooling';
+      return { ...opp, signal, action, trend, rank: i + 1 };
+    });
+
+  const filteredOpps = liveOpps.filter(opp => {
+    if (filter === "Strong" && opp.signal !== "STRONG_WHITESPACE") return false;
+    if (filter === "Moderate" && opp.signal !== "MODERATE") return false;
+    if (filter === "Saturated" && opp.signal !== "SATURATED") return false;
     return true;
-  }) || [];
+  });
+
+  const liveMeta = {
+    total_domains: liveOpps.length,
+    strong_signals: liveOpps.filter(o => o.signal === 'STRONG_WHITESPACE').length,
+    moderate_signals: liveOpps.filter(o => o.signal === 'MODERATE').length,
+    saturated: liveOpps.filter(o => o.signal === 'SATURATED').length,
+  };
 
   // ── Loading ──────────────────────────────────────────────────────────────────
   if (loading) {
@@ -185,7 +213,7 @@ export default function WeeklyDigest() {
     );
   }
 
-  const { meta, narrative, week_of, generated_at, soul_snapshot, opportunities } = digest;
+  const { meta, narrative, week_of, generated_at, soul_snapshot } = digest;
 
   return (
     <div className="animate-fade-up">
@@ -199,7 +227,7 @@ export default function WeeklyDigest() {
             Week of {week_of}
           </h2>
           <p style={{ fontSize: "12px", color: "var(--fog)", fontFamily: "var(--font-mono)" }}>
-            Generated {timeAgo(generated_at)} · {meta?.total_domains} domains tracked · Risk: <span style={{ color: "var(--cream)", textTransform: "capitalize" }}>{soul_snapshot?.risk_appetite}</span>
+            Generated {timeAgo(generated_at)} · {liveMeta.total_domains} domains tracked · Risk: <span style={{ color: "var(--cream)", textTransform: "capitalize" }}>{riskAppetite}</span>
           </p>
         </div>
         <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
@@ -227,10 +255,10 @@ export default function WeeklyDigest() {
 
       {/* ── Stats Row ───────────────────────────────────────────────────────── */}
       <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", marginBottom: "28px" }}>
-        <StatCard label="Domains Scanned" value={meta?.total_domains ?? 0} color="var(--cream)" />
-        <StatCard label="Strong Signals"  value={meta?.strong_signals ?? 0}  color="#7ec99a" />
-        <StatCard label="Moderate"        value={meta?.moderate_signals ?? 0} color="var(--amber)" />
-        <StatCard label="Saturated"       value={meta?.saturated ?? 0}        color="var(--fog)" />
+        <StatCard label="Domains Scanned" value={liveMeta.total_domains} color="var(--cream)" />
+        <StatCard label="Strong Signals"  value={liveMeta.strong_signals}  color="#7ec99a" />
+        <StatCard label="Moderate"        value={liveMeta.moderate_signals} color="var(--amber)" />
+        <StatCard label="Saturated"       value={liveMeta.saturated}        color="var(--fog)" />
       </div>
 
       {/* ── Filter Pills + Table header ─────────────────────────────────────── */}
